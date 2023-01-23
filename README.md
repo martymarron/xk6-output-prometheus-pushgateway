@@ -14,3 +14,26 @@ K6_JOB_NAME=k6_load_testing \
 ./script.js \
 -o output-prometheus-pushgateway
 ```
+
+# Prometheus Labels
+
+It is possible to add Prometheus labels with external JSON dictionary in `js` script
+
+```
+export const options = {
+  ext: {
+    "pushgateway": {
+      app: "myapp",
+      env: "myenv",
+    }
+  }
+};
+```
+
+or with environment variables
+
+```
+K6_LABEL_APP=myapp K6_LABEL_ENV=myenv k6 run ...
+```
+
+It is possible to add more debug output to console with `K6_DEBUG=true` environment variable.
