@@ -74,7 +74,7 @@ func (o *Output) flushMetrics() {
 		count += len(samples)
 		for _, sample := range samples {
 			collectorResolver := collector_resolver.CreateResolver(sample.Metric.Type)
-			collectors := collectorResolver(sample.Metric, start)
+			collectors := collectorResolver(sample)
 			pushCollectors(collectors, pusher)
 		}
 		if err := pusher.Add(); err != nil {

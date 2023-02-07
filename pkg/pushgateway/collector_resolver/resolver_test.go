@@ -37,12 +37,14 @@ func TestCreateResolver(t *testing.T) {
 
 func TestResolveCounter(t *testing.T) {
 	// Given
+	timeFirst := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	timeSecond := time.Date(2000, 1, 1, 0, 0, 1, 0, time.UTC)
 	metricName := "sample_metric"
 	metricValue := 100
 	metricSeed, _ := metrics.NewRegistry().NewMetric(metricName, metrics.Counter)
 	sink := &metrics.CounterSink{
 		Value: float64(metricValue),
-		First: time.Now(),
+		First: timeFirst,
 	}
 	metric := &metrics.Metric{
 		Name:       metricSeed.Name,
@@ -55,9 +57,16 @@ func TestResolveCounter(t *testing.T) {
 		Sink:       sink,
 		Observed:   metricSeed.Observed,
 	}
+	sample := metrics.Sample{
+		TimeSeries: metrics.TimeSeries{
+			Metric: metric,
+		},
+		Time:  timeSecond,
+		Value: sink.Value,
+	}
 
 	// When
-	collectors := resolveCounter(metric, time.Now())
+	collectors := resolveCounter(sample)
 
 	// Then
 	if len(collectors) != 1 {
@@ -113,9 +122,16 @@ func TestResolveGauge(t *testing.T) {
 		Sink:       sink,
 		Observed:   metricSeed.Observed,
 	}
+	sample := metrics.Sample{
+		TimeSeries: metrics.TimeSeries{
+			Metric: metric,
+		},
+		Time:  time.Now(),
+		Value: sink.Value,
+	}
 
 	// When
-	collectors := resolveGauge(metric, time.Now())
+	collectors := resolveGauge(sample)
 
 	// Then
 	if len(collectors) != 1 {
@@ -168,9 +184,16 @@ func TestResolveRate(t *testing.T) {
 		Sink:       sink,
 		Observed:   metricSeed.Observed,
 	}
+	sample := metrics.Sample{
+		TimeSeries: metrics.TimeSeries{
+			Metric: metric,
+		},
+		Time:  time.Now(),
+		Value: float64(sink.Trues) / float64(sink.Total),
+	}
 
 	// When
-	collectors := resolveRate(metric, time.Now())
+	collectors := resolveRate(sample)
 
 	// Then
 	if len(collectors) != 1 {
@@ -231,9 +254,16 @@ func TestResolveTrent(t *testing.T) {
 		Sink:       sink,
 		Observed:   metricSeed.Observed,
 	}
+	sample := metrics.Sample{
+		TimeSeries: metrics.TimeSeries{
+			Metric: metric,
+		},
+		Time:  time.Now(),
+		Value: float64(sink.Count),
+	}
 
 	// When
-	collectors := resolveTrend(metric, time.Now())
+	collectors := resolveTrend(sample)
 
 	// Then
 	if len(collectors) != 6 {
