@@ -9,6 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
+	"go.k6.io/k6/metrics"
 	"go.k6.io/k6/output"
 )
 
@@ -64,26 +65,16 @@ func (o *Output) Start() error {
 }
 
 func (o *Output) flushMetrics() {
-	samples := o.GetBufferedSamples()
-	start := time.Now()
-	var count int
+	sampleContainers := o.GetBufferedSamples()
 
-	for _, sc := range samples {
-		pusher := push.New(o.config.PushGWUrl, o.config.JobName)
-		samples := sc.GetSamples()
-		count += len(samples)
-		for _, sample := range samples {
-			collectorResolver := collector_resolver.CreateResolver(sample.Metric.Type)
-			collectors := collectorResolver(sample)
-			pushCollectors(collectors, pusher)
-		}
-		if err := pusher.Add(); err != nil {
-			o.logger.WithError(err).Debug("Could not add to Pushgateway")
-		}
-	}
+	sampleMap := extractPushSamples(sampleContainers)
+	o.logger.WithFields(dumpk6Sample(sampleMap)).Debug("Dump k6 samples.")
+	collectors := convertk6SamplesToPromCollectors(sampleMap)
 
-	if count > 0 {
-		o.logger.WithField("t", time.Since(start)).WithField("count", count).Debug("Wrote metrics to stdout")
+	pusher := push.New(o.config.PushGWUrl, o.config.JobName)
+	pushCollectors(collectors, pusher)
+	if err := pusher.Add(); err != nil {
+		o.logger.WithError(err).Debug("Could not add to Pushgateway")
 	}
 }
 
@@ -91,4 +82,51 @@ func pushCollectors(cs []prometheus.Collector, pusher *push.Pusher) {
 	for _, collector := range cs {
 		pusher.Collector(collector)
 	}
+}
+
+func extractPushSamples(sampleContainers []metrics.SampleContainer) map[string]metrics.Sample {
+	// To avoid duplicated metric registration,
+	// store metric name and its value as a map,
+	// and overwrite the value by the latest one.
+	sampleMap := make(map[string]metrics.Sample)
+	for _, sampleContainer := range sampleContainers {
+		samples := sampleContainer.GetSamples()
+		for _, sample := range samples {
+			key := sample.Metric.Name
+			sampleMap[key] = sample
+		}
+	}
+	return sampleMap
+}
+
+func convertk6SamplesToPromCollectors(samplesMap map[string]metrics.Sample) []prometheus.Collector {
+	collectors := make([]prometheus.Collector, 0)
+	for _, sample := range samplesMap {
+		resolver := collector_resolver.CreateResolver(sample.Metric.Type)
+		collectors = append(collectors, resolver(sample)...)
+	}
+	return collectors
+}
+
+func dumpk6Sample(samplesMap map[string]metrics.Sample) logrus.Fields {
+	var value float64
+	t := time.Since(time.Now())
+	fields := logrus.Fields{}
+	for _, sample := range samplesMap {
+		switch sample.Metric.Type {
+		case metrics.Counter:
+			value = sample.Metric.Sink.Format(t)["count"]
+		case metrics.Gauge:
+			value = sample.Metric.Sink.Format(t)["value"]
+		case metrics.Rate:
+			value = sample.Metric.Sink.Format(t)["rate"]
+		}
+		fields[sample.Metric.Name] = map[string]interface{}{
+			"sample_value": sample.Value,
+			"sink_value":   value,
+			"name":         sample.Metric.Name,
+			"type":         sample.Metric.Type,
+		}
+	}
+	return fields
 }
