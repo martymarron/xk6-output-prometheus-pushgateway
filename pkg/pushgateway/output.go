@@ -72,15 +72,14 @@ func (o *Output) flushMetrics() {
 	collectors := convertk6SamplesToPromCollectors(sampleMap)
 
 	pusher := push.New(o.config.PushGWUrl, o.config.JobName)
-	pushCollectors(collectors, pusher)
-	if err := pusher.Add(); err != nil {
-		o.logger.WithError(err).Debug("Could not add to Pushgateway")
-	}
-}
+	registry := prometheus.NewPedanticRegistry()
+	registry.MustRegister(collectors...)
+	o.logger.WithFields(dumpPrometheusCollector(registry)).Debug("Dump collectors.")
 
-func pushCollectors(cs []prometheus.Collector, pusher *push.Pusher) {
-	for _, collector := range cs {
-		pusher.Collector(collector)
+	if err := pusher.Gatherer(registry).Push(); err != nil {
+		o.logger.
+			WithError(err).
+			Error("Could not add to Pushgateway")
 	}
 }
 
@@ -127,6 +126,15 @@ func dumpk6Sample(samplesMap map[string]metrics.Sample) logrus.Fields {
 			"name":         sample.Metric.Name,
 			"type":         sample.Metric.Type,
 		}
+	}
+	return fields
+}
+
+func dumpPrometheusCollector(reg *prometheus.Registry) logrus.Fields {
+	metricFamilies, _ := prometheus.Gatherers{reg}.Gather()
+	fields := logrus.Fields{}
+	for _, metricFamily := range metricFamilies {
+		fields[metricFamily.GetName()] = metricFamily.String()
 	}
 	return fields
 }
