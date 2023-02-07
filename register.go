@@ -7,7 +7,9 @@ import (
 )
 
 func init() {
-	output.RegisterExtension("output-prometheus-pushgateway", func(p output.Params) (output.Output, error) {
+	name := "output-prometheus-pushgateway"
+	output.RegisterExtension(name, func(p output.Params) (output.Output, error) {
+		p.Logger = p.Logger.WithField("component", name)
 		return pushgateway.New(p)
 	})
 }
