@@ -20,6 +20,7 @@ type Output struct {
 	config          Config
 	periodicFlusher *output.PeriodicFlusher
 	logger          logrus.FieldLogger
+	pusher          *push.Pusher
 }
 
 var _ output.Output = new(Output)
@@ -53,6 +54,7 @@ func (o *Output) Start() error {
 	o.logger.Debug("Starting...")
 
 	// Here we should connect to a service, open a file or w/e else we decided we need to do
+	o.pusher = push.New(o.config.PushGWUrl, o.config.JobName)
 
 	pf, err := output.NewPeriodicFlusher(o.config.PushInterval, o.flushMetrics)
 	if err != nil {
@@ -71,12 +73,11 @@ func (o *Output) flushMetrics() {
 	o.logger.WithFields(dumpk6Sample(sampleMap)).Debug("Dump k6 samples.")
 	collectors := convertk6SamplesToPromCollectors(sampleMap)
 
-	pusher := push.New(o.config.PushGWUrl, o.config.JobName)
 	registry := prometheus.NewPedanticRegistry()
 	registry.MustRegister(collectors...)
 	o.logger.WithFields(dumpPrometheusCollector(registry)).Debug("Dump collectors.")
 
-	if err := pusher.Gatherer(registry).Push(); err != nil {
+	if err := o.pusher.Gatherer(registry).Push(); err != nil {
 		o.logger.
 			WithError(err).
 			Error("Could not add to Pushgateway")
