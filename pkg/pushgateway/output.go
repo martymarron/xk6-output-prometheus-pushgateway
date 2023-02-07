@@ -1,6 +1,7 @@
 package pushgateway
 
 import (
+	"fmt"
 	"time"
 
 	collector_resolver "github.com/martymarron/xk6-output-prometheus-pushgateway/pkg/pushgateway/collector_resolver"
@@ -40,7 +41,7 @@ func New(p output.Params) (*Output, error) {
 }
 
 func (o *Output) Description() string {
-	return "pushgateway: " + o.config.PushGWUrl
+	return fmt.Sprintf("pushgateway: %s, job: %s", o.config.PushGWUrl, o.config.JobName)
 }
 
 func (o *Output) Stop() error {
