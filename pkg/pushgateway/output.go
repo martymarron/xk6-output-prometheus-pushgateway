@@ -2,6 +2,7 @@ package pushgateway
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	collector_resolver "github.com/martymarron/xk6-output-prometheus-pushgateway/pkg/pushgateway/collector_resolver"
@@ -22,6 +23,7 @@ type Output struct {
 	periodicFlusher *output.PeriodicFlusher
 	logger          logrus.FieldLogger
 	pusher          *push.Pusher
+	waitGroup       sync.WaitGroup
 }
 
 var _ output.Output = new(Output)
@@ -48,6 +50,8 @@ func (o *Output) Stop() error {
 	o.logger.Debug("Stopping...")
 	defer o.logger.Debug("Stopped!")
 	o.periodicFlusher.Stop()
+	o.waitGroup.Wait()
+
 	return nil
 }
 
@@ -70,19 +74,24 @@ func (o *Output) Start() error {
 func (o *Output) flushMetrics() {
 	sampleContainers := o.GetBufferedSamples()
 
-	sampleMap := extractPushSamples(sampleContainers)
-	o.logger.WithFields(dumpk6Sample(sampleMap)).Debug("Dump k6 samples.")
-	collectors := convertk6SamplesToPromCollectors(sampleMap)
+	o.waitGroup.Add(1)
+	go func() {
+		defer o.waitGroup.Done()
 
-	registry := prometheus.NewPedanticRegistry()
-	registry.MustRegister(collectors...)
-	o.logger.WithFields(dumpPrometheusCollector(registry)).Debug("Dump collectors.")
+		sampleMap := extractPushSamples(sampleContainers)
+		o.logger.WithFields(dumpk6Sample(sampleMap)).Debug("Dump k6 samples.")
+		collectors := convertk6SamplesToPromCollectors(sampleMap)
 
-	if err := o.pusher.Gatherer(registry).Push(); err != nil {
-		o.logger.
-			WithError(err).
-			Error("Could not add to Pushgateway")
-	}
+		registry := prometheus.NewPedanticRegistry()
+		registry.MustRegister(collectors...)
+		o.logger.WithFields(dumpPrometheusCollector(registry)).Debug("Dump collectors.")
+
+		if err := o.pusher.Gatherer(registry).Push(); err != nil {
+			o.logger.
+				WithError(err).
+				Error("Could not add to Pushgateway")
+		}
+	}()
 }
 
 func extractPushSamples(sampleContainers []metrics.SampleContainer) map[string]metrics.Sample {
