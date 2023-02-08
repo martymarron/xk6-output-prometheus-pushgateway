@@ -233,7 +233,6 @@ func TestResolveTrent(t *testing.T) {
 	min, max := 10.00, 90.00
 	values := []float64{50.00, min, max}
 	sum, avg := 150.00, 50.00
-	med := 50.00
 	sink := &metrics.TrendSink{
 		Values: values,
 		Count:  uint64(len(values)),
@@ -241,7 +240,6 @@ func TestResolveTrent(t *testing.T) {
 		Max:    max,
 		Sum:    sum,
 		Avg:    avg,
-		Med:    med,
 	}
 	metric := &metrics.Metric{
 		Name:       metricSeed.Name,
