@@ -36,4 +36,12 @@ or with environment variables
 K6_LABEL_APP=myapp K6_LABEL_ENV=myenv k6 run ...
 ```
 
-It is possible to add more debug output to console with `K6_DEBUG=true` environment variable.
+It is possible to check Prometheus labels with debug output. It looks like
+```
+DEBU[0000] Pushgateway labels from JSON options.ext.pushgateway dictionary map[app:MYAPP env:MYENV url:MYURL]
+DEBU[0000] Pushgateway labels map[app:MYAPP env:MYENV url:MYURL]
+```
+
+The 1st line is Prometheus labels from `options.ext.pushgateway` dictionary.
+
+The 2nd line is the final set of labels after merging `options.ext.pushgateway` dictionary and environment variables.

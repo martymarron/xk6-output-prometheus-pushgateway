@@ -2,7 +2,10 @@ module github.com/martymarron/xk6-output-prometheus-pushgateway
 
 go 1.18
 
-require go.k6.io/k6 v0.42.0
+require (
+	github.com/pkg/errors v0.9.1
+	go.k6.io/k6 v0.41.0
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

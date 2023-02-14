@@ -4,12 +4,14 @@ import (
 	"testing"
 
 	"github.com/martymarron/xk6-output-prometheus-pushgateway/pkg/pushgateway"
+	"github.com/sirupsen/logrus"
 	"go.k6.io/k6/output"
 )
 
 func TestConfigLabels(t *testing.T) {
 	p := output.Params{
 		Environment: map[string]string{},
+		Logger:      logrus.New(),
 	}
 	cfg, err := pushgateway.NewConfig(p)
 	if err != nil {

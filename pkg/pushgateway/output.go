@@ -43,7 +43,7 @@ func New(p output.Params) (*Output, error) {
 }
 
 func (o *Output) Description() string {
-	return fmt.Sprintf("pushgateway: %s, job: %s", o.config.PushGWUrl, o.config.JobName)
+	return fmt.Sprintf("pushgateway: %s, job: %s, labels: %s", o.config.PushGWUrl, o.config.JobName, o.config.Labels)
 }
 
 func (o *Output) Stop() error {
