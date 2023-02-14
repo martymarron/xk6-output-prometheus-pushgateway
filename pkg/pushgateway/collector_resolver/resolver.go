@@ -17,16 +17,15 @@ import (
 // [k6 metric type]: https://k6.io/docs/using-k6/metrics/#metric-types
 // [conversion rule]: https://k6.io/blog/k6-loves-prometheus/#mapping-k6-metrics-types
 // [xk6-output-prometheus-remote]: https://github.com/grafana/xk6-output-prometheus-remote
-type CollectorResolver func(metric *metrics.Metric, t time.Time) []prometheus.Collector
+type CollectorResolver func(sample metrics.Sample) []prometheus.Collector
 
 // CreateResolveer is a factory method to create the [ColloectorResolver] implementation
 // corresponding to the given [k6 metric type].
 //
 // Example use case:
 //
-//    collectorResolver := collector_resolver.CreateResolver(sample.Metric.Type)
-//    collectors := collectorResolver(sample.Metric, time.Now())
-//
+//	collectorResolver := collector_resolver.CreateResolver(sample.Metric.Type)
+//	collectors := collectorResolver(sample.Metric, time.Now())
 //
 // [k6 metric type]: https://k6.io/docs/using-k6/metrics/#metric-types
 func CreateResolver(t metrics.MetricType) CollectorResolver {
@@ -44,47 +43,45 @@ func CreateResolver(t metrics.MetricType) CollectorResolver {
 	return resolver
 }
 
-func resolveCounter(metric *metrics.Metric, t time.Time) []prometheus.Collector {
+func resolveCounter(sample metrics.Sample) []prometheus.Collector {
 	counter := prometheus.NewCounterFunc(
 		prometheus.CounterOpts{
-			Name: metric.Name,
+			Name: sample.Metric.Name,
 		},
 		func() float64 {
-			sink := metric.Sink.Format(time.Since(t))
-			return sink["count"]
+			counterSink := sample.Metric.Sink.(*metrics.CounterSink)
+			return sample.Metric.Sink.Format(sample.GetTime().Sub(counterSink.First))["rate"]
 		},
 	)
 	return []prometheus.Collector{counter}
 }
 
-func resolveGauge(metric *metrics.Metric, t time.Time) []prometheus.Collector {
+func resolveGauge(sample metrics.Sample) []prometheus.Collector {
 	gauge := prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
-			Name: metric.Name,
+			Name: sample.Metric.Name,
 		},
 		func() float64 {
-			sink := metric.Sink.Format(time.Since(t))
-			return sink["value"]
+			return sample.Value
 		},
 	)
 	return []prometheus.Collector{gauge}
 }
 
-func resolveRate(metric *metrics.Metric, t time.Time) []prometheus.Collector {
+func resolveRate(sample metrics.Sample) []prometheus.Collector {
 	gauge := prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
-			Name: metric.Name,
+			Name: sample.Metric.Name,
 		},
 		func() float64 {
-			sink := metric.Sink.Format(time.Since(t))
-			return sink["rate"]
+			return sample.Value
 		},
 	)
 	return []prometheus.Collector{gauge}
 }
 
-func resolveTrend(metric *metrics.Metric, t time.Time) []prometheus.Collector {
-	sink := metric.Sink.Format(time.Since(t))
+func resolveTrend(sample metrics.Sample) []prometheus.Collector {
+	sink := sample.Metric.Sink.Format(time.Duration(0))
 
 	collectors := make([]prometheus.Collector, 0)
 	for k, v := range sink {
@@ -92,7 +89,7 @@ func resolveTrend(metric *metrics.Metric, t time.Time) []prometheus.Collector {
 		// Becuase these are not acceptable as collector name.
 		suffix := strings.ReplaceAll(strings.ReplaceAll(k, "(", ""), ")", "")
 
-		name := fmt.Sprintf("%s_%s", metric.Name, suffix)
+		name := fmt.Sprintf("%s_%s", sample.Metric.Name, suffix)
 		gauge := prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: name,

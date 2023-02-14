@@ -1,9 +1,16 @@
 all: test build
+.PHONY: all
 
 test:
 	go test -cover -race ./...
 
 build:
-	xk6 build --with xk6-output-prometheus-pushgateway=. --with github.com/mstoykov/xk6-counter@latest
+	xk6 build --with xk6-output-prometheus-pushgateway=.
 
-.PHONY: test build
+run:
+	xk6 run \
+	-o output-prometheus-pushgateway \
+	--iterations 100 \
+	--vus 20 \
+	--verbose \
+	./script.js
