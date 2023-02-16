@@ -1,8 +1,12 @@
 package pushgateway
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"go.k6.io/k6/output"
 )
@@ -15,17 +19,34 @@ const (
 
 // Config is the config for the template collector
 type Config struct {
+	JobName      string
+	Labels       map[string]string
 	PushGWUrl    string
 	PushInterval time.Duration
-	JobName      string
 }
 
 // NewConfig creates a new Config instance from the provided output.Params
 func NewConfig(p output.Params) (Config, error) {
 	cfg := Config{
+		JobName:      defaultJobName,
+		Labels:       map[string]string{},
 		PushGWUrl:    defaultPushGWUrl,
 		PushInterval: defaultPushInterval,
-		JobName:      defaultJobName,
+	}
+
+	if val, ok := p.ScriptOptions.External["pushgateway"]; ok {
+		err := json.Unmarshal(val, &cfg.Labels)
+		if err != nil {
+			j, err := json.Marshal(&val)
+			if err != nil {
+				return cfg, errors.Wrap(err, fmt.Sprintf(
+					"unable to get labels for JSON options.ext.pushgateway dictionary %s", string(j)))
+			} else {
+				return cfg, errors.Wrap(err, "unable to get labels for JSON options.ext.pushgateway dictionary")
+			}
+
+		}
+		p.Logger.Debugf("Pushgateway labels from JSON options.ext.pushgateway dictionary %+v", cfg.Labels)
 	}
 
 	for k, v := range p.Environment {
@@ -41,6 +62,11 @@ func NewConfig(p output.Params) (Config, error) {
 		case "K6_JOB_NAME":
 			cfg.JobName = v
 		}
+		if strings.HasPrefix(k, "K6_LABEL_") {
+			key := strings.ToLower(k[9:])
+			cfg.Labels[key] = strings.ToLower(v)
+		}
 	}
+	p.Logger.Debugf("Pushgateway labels %+v", cfg.Labels)
 	return cfg, nil
 }
