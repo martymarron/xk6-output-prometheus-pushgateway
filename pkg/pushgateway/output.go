@@ -22,7 +22,6 @@ type Output struct {
 	config          Config
 	periodicFlusher *output.PeriodicFlusher
 	logger          logrus.FieldLogger
-	pusher          *push.Pusher
 	waitGroup       sync.WaitGroup
 }
 
@@ -59,7 +58,6 @@ func (o *Output) Start() error {
 	o.logger.Debug("Starting...")
 
 	// Here we should connect to a service, open a file or w/e else we decided we need to do
-	o.pusher = push.New(o.config.PushGWUrl, o.config.JobName)
 
 	pf, err := output.NewPeriodicFlusher(o.config.PushInterval, o.flushMetrics)
 	if err != nil {
@@ -92,7 +90,8 @@ func (o *Output) flushMetrics() {
 		registry.MustRegister(collectors...)
 		o.logger.WithFields(dumpPrometheusCollector(registry)).Debug("Dump collectors.")
 
-		if err := o.pusher.Gatherer(registry).Push(); err != nil {
+		pusher := push.New(o.config.PushGWUrl, o.config.JobName)
+		if err := pusher.Gatherer(registry).Add(); err != nil {
 			o.logger.
 				Errorf("Could not add to Pushgateway: %v", err)
 		}
