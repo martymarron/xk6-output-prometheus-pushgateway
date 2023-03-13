@@ -94,8 +94,7 @@ func (o *Output) flushMetrics() {
 
 		if err := o.pusher.Gatherer(registry).Push(); err != nil {
 			o.logger.
-				WithError(err).
-				Error("Could not add to Pushgateway")
+				Errorf("Could not add to Pushgateway: %v", err)
 		}
 	}()
 }
