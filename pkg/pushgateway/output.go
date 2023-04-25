@@ -116,12 +116,8 @@ func extractPushSamples(sampleContainers []metrics.SampleContainer) map[string]m
 func (o *Output) convertk6SamplesToPromCollectors(samplesMap map[string]metrics.Sample, labels prometheus.Labels) []prometheus.Collector {
 	collectors := make([]prometheus.Collector, 0)
 	for _, sample := range samplesMap {
-		if o.config.Namespace != "" {
-			sample.Metric.Name = o.config.Namespace + "_" + sample.Metric.Name
-		}
-
 		resolver := collector_resolver.CreateResolver(sample.Metric.Type)
-		collectors = append(collectors, resolver(sample, labels)...)
+		collectors = append(collectors, resolver(sample, labels, o.config.Namespace)...)
 	}
 	return collectors
 }
