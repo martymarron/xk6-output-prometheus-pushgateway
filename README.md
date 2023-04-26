@@ -48,7 +48,7 @@ The 2nd line is the final set of labels after merging `options.ext.pushgateway` 
 
 # Metrics prefix
 
-It is possible to configure this output to expose time series with a prefix.
+It is possible to configure this output to expose the time series with a prefix.
 
 Configure it with the following environment variable:
 
