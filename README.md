@@ -45,3 +45,13 @@ DEBU[0000] Pushgateway labels map[app:MYAPP env:MYENV url:MYURL]
 The 1st line is Prometheus labels from `options.ext.pushgateway` dictionary.
 
 The 2nd line is the final set of labels after merging `options.ext.pushgateway` dictionary and environment variables.
+
+# Metrics prefix
+
+It is possible to configure this output to expose time series with a prefix.
+
+Configure it with the following environment variable:
+
+```
+K6_PUSHGATEWAY_NAMESPACE=k6 k6 run ...
+```
