@@ -15,6 +15,7 @@ const (
 	defaultPushGWUrl    = "http://localhost:9091"
 	defaultPushInterval = 10 * time.Second
 	defaultJobName      = "k6_load_testing"
+	defaultNamespace    = ""
 )
 
 // Config is the config for the template collector
@@ -23,6 +24,9 @@ type Config struct {
 	Labels       map[string]string
 	PushGWUrl    string
 	PushInterval time.Duration
+
+	// Used to prefix all tags with a custom namespace
+	Namespace string
 }
 
 // NewConfig creates a new Config instance from the provided output.Params
@@ -32,6 +36,7 @@ func NewConfig(p output.Params) (Config, error) {
 		Labels:       map[string]string{},
 		PushGWUrl:    defaultPushGWUrl,
 		PushInterval: defaultPushInterval,
+		Namespace:    defaultNamespace,
 	}
 
 	if val, ok := p.ScriptOptions.External["pushgateway"]; ok {
@@ -59,6 +64,8 @@ func NewConfig(p output.Params) (Config, error) {
 			}
 		case "K6_PUSHGATEWAY_URL":
 			cfg.PushGWUrl = v
+		case "K6_PUSHGATEWAY_NAMESPACE":
+			cfg.Namespace = v
 		case "K6_JOB_NAME":
 			cfg.JobName = v
 		}
