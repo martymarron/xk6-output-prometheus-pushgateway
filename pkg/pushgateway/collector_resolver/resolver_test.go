@@ -226,21 +226,13 @@ func TestResolveRate(t *testing.T) {
 	}
 }
 
-func TestResolveTrent(t *testing.T) {
+func TestResolveTrend(t *testing.T) {
 	// Given
 	metricName := "sample_metric"
 	metricSeed, _ := metrics.NewRegistry().NewMetric(metricName, metrics.Trend)
 	min, max := 10.00, 90.00
 	values := []float64{50.00, min, max}
-	sum, avg := 150.00, 50.00
-	sink := &metrics.TrendSink{
-		Values: values,
-		Count:  uint64(len(values)),
-		Min:    min,
-		Max:    max,
-		Sum:    sum,
-		Avg:    avg,
-	}
+	sink := metrics.NewTrendSink()
 	metric := &metrics.Metric{
 		Name:       metricSeed.Name,
 		Type:       metricSeed.Type,
@@ -252,16 +244,21 @@ func TestResolveTrent(t *testing.T) {
 		Sink:       sink,
 		Observed:   metricSeed.Observed,
 	}
-	sample := metrics.Sample{
-		TimeSeries: metrics.TimeSeries{
-			Metric: metric,
-		},
-		Time:  time.Now(),
-		Value: float64(sink.Count),
+	var samples []metrics.Sample
+	for _, value := range values {
+		sample := metrics.Sample{
+			TimeSeries: metrics.TimeSeries{
+				Metric: metric,
+			},
+			Time:  time.Now(),
+			Value: value,
+		}
+		sink.Add(sample);
+		samples = append(samples, sample)
 	}
 
 	// When
-	collectors := resolveTrend(sample, nil, "")
+	collectors := resolveTrend(samples[0], nil, "")
 
 	// Then
 	if len(collectors) != 6 {
