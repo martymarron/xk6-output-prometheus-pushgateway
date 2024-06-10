@@ -253,7 +253,7 @@ func TestResolveTrend(t *testing.T) {
 			Time:  time.Now(),
 			Value: value,
 		}
-		sink.Add(sample);
+		sink.Add(sample)
 		samples = append(samples, sample)
 	}
 
