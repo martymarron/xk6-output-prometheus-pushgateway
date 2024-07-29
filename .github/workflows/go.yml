@@ -8,7 +8,13 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch"
+        required: true
+        default: "main"
+      
 jobs:
 
   build:
@@ -20,6 +26,10 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.20'
+    
+    - name: Install dependencies
+      run: go install go.k6.io/xk6/cmd/xk6@latest
+
 
     - name: Build
       run: make build
