@@ -5,7 +5,7 @@ test:
 	go test -cover -race ./...
 
 build:
-	xk6 build --with xk6-output-prometheus-pushgateway=.
+	xk6 build --with github.com/martymarron/xk6-output-prometheus-pushgateway@latest=.
 
 run:
 	xk6 run \
